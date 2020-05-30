@@ -38,7 +38,7 @@ headers = {
 
 allusers = {}
 
-for user in range(913,8170):
+for user in range(1,8170):
     uid = str(user)
     
     print(f"[*] Getting data on uid {uid}")
