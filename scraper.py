@@ -6,10 +6,12 @@ logfile = "greysec-scraper.log"
 datafile = "greysec-data.json"
 
 def parse_data(data):
+    # Parses a beautiful soup object. The bs object should be the html of a GreySec User profile. Returns a dictionary of the username, post count, and thread count.
     # data - BeautifulSoup object to scrape <bs4>
     postcount = "NULL"
     threadcount = "NULL"
     # Find username
+    # Regex parses the html title, gets the section of text after "of ", which should be the username.
     username = re.search("of [\S' ']{3,30}$", data.title.text).group().replace("of ","").strip()
 
     # Find post count
@@ -20,6 +22,7 @@ def parse_data(data):
 
     # Find thread count
     for trow in data.find_all(class_="trow2"):
+        # Looping through every tag with a trow2 class isn't efficient. Need to find a better way to parse the post count and thread count.
         if "threads per" in trow.text:
             threadcount = re.search("^\d{1,10}", trow.text.replace(",","")).group().strip()
     
@@ -33,12 +36,12 @@ def parse_data(data):
 
 headers = {
         "User-Agent":"Greysec-Scraper-v1.2",
-        "Cookie":"mybb[lastvisit]=1589776861; mybb[lastactive]=1589776872; loginattempts=1; mybbuser=7904_ILJLmsD0wfnoPt5TfwbTd2nd4ghja0YvfQsa9jN3G5rpCWzZAH; sid=c89900f45635fdff3a2206082b19aa4b"
+        "Cookie":"Insert your GreySec Cookie here"
         }
 
 allusers = {}
 
-for user in range(1,8170):
+for user in range(1,8170): # Greysec users as of time of writing: 8,169. 
     uid = str(user)
     
     print(f"[*] Getting data on uid {uid}")
