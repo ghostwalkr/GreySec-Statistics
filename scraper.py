@@ -1,30 +1,87 @@
-#!/usr/bin/env python3
-import sys, json, re, requests
+import sys, json, re, requests, configparser
 from bs4 import BeautifulSoup
+from time import localtime, ctime, sleep
+from pprint import pprint
 
-logfile = "greysec-scraper.log"
-datafile = "greysec-data.json"
+headers = {
+        "User-Agent":"Greysec-Scraper-v1.2",
+        "Cookie":"mybb[lastvisit]=1589776861; mybb[lastactive]=1589776872; loginattempts=1; mybbuser=7904_ILJLmsD0wfnoPt5TfwbTd2nd4ghja0YvfQsa9jN3G5rpCWzZAH; sid=c89900f45635fdff3a2206082b19aa4b"
+        }
+now = localtime()
+start_time = "{}-{}_{}-{}-{}".format(now.tm_hour, now.tm_min, now.tm_year, now.tm_mon, now.tm_mday)
+
+def banner():
+    print("""                #################
+              #######################
+            #####*######################
+          ###############################
+         ###################r#############
+        ###################################
+        ###################################
+        ###           #######           ###
+        #              #####              #
+        #              #####              #
+        ##            #######            ##
+        ####        ###########        ####
+        ###################################
+          ##############   ##p###########
+        ######$########     ###############
+        #  ############################# ##
+        ## #############00############# ###
+        #############################  ####
+         ####  ## ###   #### #### ## ##### 
+          ##### ######## ### #  ## # ####  
+           #### ###  #  #### ### #######
+            ########## #  ### ## ######
+             #################    # ##
+                ##################
+                 ################
+
+             GreySec Data Scraper v1.3""")
+    sleep(2)
+
+def get_profile(uid=None):
+    if uid == None:
+        print("Error: function get_profile uid parameter not set")
+        return False
+    try:
+        profile = BeautifulSoup(requests.get(f"https://greysec.net/member.php?action=profile&uid={uid}", headers=headers).text, "html.parser")
+    except Exception as error:
+        print(f"Exception in function get_profile: {error}")
+        return False
+
+    return profile
 
 def parse_data(data):
-    # Parses a beautiful soup object. The bs object should be the html of a GreySec User profile. Returns a dictionary of the username, post count, and thread count.
     # data - BeautifulSoup object to scrape <bs4>
+    username = "NULL"
     postcount = "NULL"
     threadcount = "NULL"
     # Find username
-    # Regex parses the html title, gets the section of text after "of ", which should be the username.
-    username = re.search("of [\S' ']{3,30}$", data.title.text).group().replace("of ","").strip()
+    try:
+        username = re.search("of [\S' ']{3,30}$", data.title.text).group().replace("of ","").strip()
+    except:
+        username = "PARSING_ERROR"
 
     # Find post count
     for trow in data.find_all(class_="trow1"):
         if "posts per" in trow.text:
-            postcount = re.search("^\d{1,10}", trow.text.replace(",","")).group().strip()
+            try:
+                postcount = re.search("^\d{1,10}", trow.text.replace(",","")).group().strip()
+            except:
+                postcount = "PARSING_ERROR"
+
             break
 
     # Find thread count
     for trow in data.find_all(class_="trow2"):
-        # Looping through every tag with a trow2 class isn't efficient. Need to find a better way to parse the post count and thread count.
         if "threads per" in trow.text:
-            threadcount = re.search("^\d{1,10}", trow.text.replace(",","")).group().strip()
+            try:
+                threadcount = re.search("^\d{1,10}", trow.text.replace(",","")).group().strip()
+            except:
+                threadcount = "PARSING_ERROR"
+                
+            break
     
     userdata = {
             "username":f"{username}",
@@ -34,29 +91,61 @@ def parse_data(data):
 
     return userdata
 
-headers = {
-        "User-Agent":"Greysec-Scraper-v1.2",
-        "Cookie":"Insert your GreySec Cookie here"
+## Main ##
+##########################
+
+banner()
+
+# Load configuration from file
+try:
+    config = configparser.ConfigParser()
+    config.read("scraper.conf")
+    user_range = [ int(config["MAIN"]["uid_start"]), int(config["MAIN"]["uid_end"]) ]
+    version = "greysec_scraper_v1.3"
+    datafile = config["MAIN"]["outfile"]
+    verbose = config["MAIN"]["verbose"]
+except Exception as error:
+    print(f"Error: {error}")
+    sys.exit(1)
+
+print("Starting GreySec Data Scraper at {}".format(ctime()))
+
+data_output = {
+        "starttime": start_time,
+        "endtime": "ENDTIME",
+        "data": {}
         }
-
-allusers = {}
-
-for user in range(1,8170): # Greysec users as of time of writing: 8,169. 
-    uid = str(user)
+try:
+    for user in range(user_range[0],user_range[1] + 1):
+        uid = str(user)
     
-    print(f"[*] Getting data on uid {uid}")
-    try:
-        html = BeautifulSoup(requests.get(f"https://greysec.net/member.php?action=profile&uid={user}", headers=headers).text, "html.parser")
-    except Exception as error:
-        with open(logfile, "a") as log:
-            log.write(error + "\n")
-            log.close()
-        continue
+        if verbose == "true":
+            print(f"[*] Getting data on uid {uid}")
 
-    data = json.dumps(parse_data(html))
+        html = get_profile(uid)
+        if html == False: # If an error occurred in the get_profile function
+            continue
+    
+        data_output["data"][uid] = parse_data(html)
+#    data = json.dumps(parse_data(html))
 
-    with open(datafile, "a") as outfile:
-        outfile.write(f'"{uid}":{data},\n')
-        outfile.close()
+#    with open(datafile, "a") as outfile:
+#        outfile.write(f'"{uid}":{data},\n')
+#        outfile.close()
+        if verbose == "true":
+            print(str(data_output["data"][uid]) + "\n")
 
-    print(data + "\n")
+    end_time = "{}-{}_{}-{}-{}".format(localtime().tm_hour, localtime().tm_min, localtime().tm_year, localtime().tm_mon, localtime().tm_mday)
+    data_output["endtime"] = end_time
+
+except KeyboardInterrupt:
+    print("\nUser interrupt. Finishing up...")
+
+finally:
+    # Write results to file
+
+    with open(datafile, "w") as out:
+        json.dump(data_output, out, indent="\t")
+        out.close()
+
+    print("GreySec Data Scraper Complete at {}".format(ctime()))
