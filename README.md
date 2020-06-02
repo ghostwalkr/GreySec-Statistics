@@ -1,6 +1,7 @@
 # GreySec-Statistics
 Statistics for greysec.net forum
 
+![alt text](https://imgur.com/a/aNxOMmf "Scraper")
 ## Summary
 This repo is for the GreySec Forums data scraper and some of the gathered data. The scraper gets the username, UID, post count, and thread count of a specified number of users.
 
