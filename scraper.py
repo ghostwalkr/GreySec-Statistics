@@ -5,7 +5,7 @@ from pprint import pprint
 
 headers = {
         "User-Agent":"Greysec-Scraper-v1.2",
-        "Cookie":"mybb[lastvisit]=1589776861; mybb[lastactive]=1589776872; loginattempts=1; mybbuser=7904_ILJLmsD0wfnoPt5TfwbTd2nd4ghja0YvfQsa9jN3G5rpCWzZAH; sid=c89900f45635fdff3a2206082b19aa4b"
+        "Cookie":""
         }
 now = localtime()
 start_time = "{}-{}_{}-{}-{}".format(now.tm_hour, now.tm_min, now.tm_year, now.tm_mon, now.tm_mday)
